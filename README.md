@@ -1,10 +1,8 @@
 # Trabajos de mantenimiento — Web App (Apps Script + Sheets)
 
-Arquitectura de puertos y adaptadores: `Controller -> Servicios -> Puertos (Ports.gs) -> Adaptadores (Sheets, Drive, LockService)`. Frontend sin acceso a datos (`index.html`).
-
 Repositorio público de muestra de código (los datos y configuraciones reales no están incluidos). Este README también está copiado como comentario al inicio de `Config.gs`, porque el editor de Apps Script no admite archivos de documentación: si se cambia uno, actualizar el otro.
 
-## Puesta en marcha (ENTORNO DE PRUEBA, cuenta de Rodo)
+## Puesta en marcha (ENTORNO DE PRUEBA)
 
 1. script.google.com > Proyecto nuevo (independiente, no vinculado a la planilla). Nombre: `rd-mant (PRUEBA)`.
 2. Cargar los 16 archivos de código (tipo Script): `Config`, `Common`, `Ports`, `CriticalSection`, `Repository`, `Storage`, `TrabajoRepository`, `CatalogRepository`, `TrabajoQuery`, `CatalogService`, `TrabajoMapper`, `TrabajoValidator`, `TrabajoSearch`, `TrabajoService`, `Controller`, `Setup`; y `index` (tipo HTML, nombre exacto `index`). Dos formas:
@@ -27,6 +25,8 @@ Repositorio público de muestra de código (los datos y configuraciones reales n
 
 ## Pruebas locales (no se suben a Apps Script)
 `node test/harness.js` desde la raíz del proyecto (62 pruebas, requiere Node; probado con 20.19). Incluye una suite de contrato que corre la lógica sin el código de Sheets/Drive.
+
+Arquitectura de puertos y adaptadores: `Controller -> Servicios -> Puertos (Ports.gs) -> Adaptadores (Sheets, Drive, LockService)`. Frontend sin acceso a datos (`index.html`).
 
 ## Pasar a producción
 Copiar el proyecto a la cuenta de producción, cambiar `SPREADSHEET_ID` y `FOLDER_ID` en Script Properties, correr `diagnosticoIds` y `migrarIds` sobre la copia de la planilla original, ejecutar `setup`, implementar igual que arriba. Nunca se despliega a producción para probar un cambio: primero se prueba todo en la copia.
