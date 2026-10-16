@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trabajos de mantenimiento</title>
+<style>
+  /* Paleta: verde de marca (#4a7625) + neutros cálidos.
+     Para ajustar la marca cambiar --accent, --accent-hover, --accent-text, --head, --head-line
+     y --accent-soft (en ambos temas). */
+  :root {
+    color-scheme: light dark; /* controles nativos (calendario, flechas, scroll) acordes al tema */
+    --bg: #f5f6f3; --card: #ffffff; --ink: #1a2014; --muted: #596052; --line: #dcdfd6;
+    --head: #2f4d17; --head-line: #6f9a42; --head-sub: #cfe0bd;
+    --accent: #4a7625; --accent-hover: #3d6320; --accent-text: #3d6320; --accent-ink: #ffffff; --accent-soft: #e9f0e1;
+    --ok: #3d6320; --err: #b42318; --chip: #eef0ea; --radius: 12px;
+    --shadow: 0 1px 2px rgba(26, 32, 20, .07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #12160f; --card: #1a2016; --ink: #eef1ea; --muted: #a3ad98; --line: #2a3223;
+            --head: #1d2d10; --head-line: #4a7625; --head-sub: #b5cc9c;
+            --accent: #8cbc5c; --accent-hover: #a3cd78; --accent-text: #8cbc5c; --accent-ink: #0f1a06; --accent-soft: #25331a;
+            --chip: #232b1d; --shadow: none; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { background: var(--head); color: #fff; padding: 14px 16px; border-bottom: 3px solid var(--head-line); }
+  header h1 { margin: 0; font-size: 1.1rem; font-weight: 650; letter-spacing: .2px; }
+  header p { margin: 2px 0 0; font-size: .8rem; color: var(--head-sub); }
+  main { max-width: 720px; margin: 0 auto; padding: 14px 14px 96px; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card);
+    border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); z-index: 5; }
+  nav button { flex: 1; min-height: 56px; background: none; border: 0; color: var(--muted);
+    font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; border-top: 3px solid transparent; }
+  nav button[aria-selected="true"] { color: var(--accent-text); border-top-color: var(--accent); background: var(--accent-soft); }
+  section[hidden] { display: none; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+  label, .lbl { display: block; font-size: .85rem; font-weight: 650; margin: 0 0 6px; }
+  .field { margin-bottom: 16px; }
+  .hint { color: var(--muted); font-size: .8rem; margin-top: 4px; }
+  select, input[type=text], input[type=date], textarea {
+    width: 100%; min-height: 46px; padding: 10px 12px; font: inherit; color: var(--ink);
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  textarea { min-height: 120px; resize: vertical; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { min-height: 44px; padding: 8px 14px; border-radius: 22px; border: 1px solid var(--line);
+    background: var(--chip); color: var(--ink); font: inherit; font-size: .92rem; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
+  .chip.extra::after { content: " ×"; font-weight: 700; }
+  .row { display: flex; gap: 8px; }
+  .row > input { flex: 1; }
+  .btn { min-height: 46px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--chip); color: var(--ink); font: inherit; font-weight: 650; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); width: 100%; font-size: 1.05rem; }
+  .btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.danger { color: var(--err); }
+  .btn.small { min-height: 38px; padding: 6px 12px; font-size: .85rem; }
+  .btn:disabled { opacity: .55; cursor: progress; }
+  .photo-preview { margin-top: 10px; display: flex; align-items: center; gap: 12px; }
+  .photo-preview img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+  .count { text-align: right; color: var(--muted); font-size: .75rem; }
+  .item { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--card); padding: 12px 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .item .top { display: flex; justify-content: space-between; gap: 8px; font-size: .8rem; color: var(--muted); }
+  .item .equipo { font-weight: 700; margin: 4px 0 2px; }
+  .item .who { font-size: .85rem; color: var(--muted); }
+  .item .desc { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box;
+    -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+  .item .desc.open { display: block; }
+  .item a { display: inline-block; margin-top: 8px; color: var(--accent-text); font-weight: 650; }
+  .seg { display: flex; gap: 6px; margin-bottom: 12px; }
+  .seg .btn { flex: 1; }
+  .seg .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .cfg-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .cfg-row:last-child { border-bottom: 0; }
+  .cfg-row .name { flex: 1; overflow-wrap: anywhere; }
+  .cfg-row input { flex: 1; min-height: 40px; }
+  .muted { color: var(--muted); }
+  .empty { text-align: center; color: var(--muted); padding: 24px 8px; }
+  details summary { cursor: pointer; font-weight: 650; padding: 8px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
+  details.filtros > summary { font-weight: 700; padding: 4px 0 10px; }
+  .actions { display: flex; gap: 8px; }
+  .actions .btn.primary { flex: 1; width: auto; font-size: 1rem; }
+  .resumen { margin: 4px 2px 10px; font-size: .85rem; color: var(--muted); min-height: 1.2em; }
+  #toast { position: fixed; left: 12px; right: 12px; bottom: 72px; max-width: 520px; margin: 0 auto; padding: 12px 14px;
+    border-radius: 10px; color: #fff; font-weight: 600; z-index: 10; display: none; }
+  #toast.ok { background: var(--ok); display: block; }
+  #toast.err { background: var(--err); display: block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Trabajos de mantenimiento</h1>
+  <p id="sub">Cargando…</p>
+</header>
+
+<main>
+  <!-- CARGAR -->
+  <section id="view-cargar" aria-label="Cargar trabajo">
+    <form id="form" class="card" novalidate>
+      <div class="field">
+        <label for="equipo">Equipo</label>
+        <select id="equipo" required></select>
+      </div>
+      <div class="field">
+        <label for="fecha">Fecha del trabajo</label>
+        <input type="date" id="fecha" required>
+      </div>
+      <div class="field">
+        <span class="lbl" id="lbl-personal">Personal interviniente</span>
+        <div class="chips" id="personal" role="group" aria-labelledby="lbl-personal"></div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="otro" maxlength="60" placeholder="Otro (colaboró en esta tarea)" aria-label="Agregar otra persona">
+          <button type="button" class="btn" id="otro-add">Agregar</button>
+        </div>
+        <div class="chips" id="extras" style="margin-top:8px"></div>
+      </div>
+      <div class="field">
+        <label for="desc">Descripción</label>
+        <textarea id="desc" maxlength="2000" required placeholder="Qué se hizo, repuestos, observaciones…"></textarea>
+        <div class="count"><span id="desc-n">0</span>/2000</div>
+      </div>
+      <div class="field">
+        <label for="foto">Foto (opcional)</label>
+        <input type="file" id="foto" accept="image/*">
+        <div class="hint">Se reduce automáticamente antes de subirla.</div>
+        <div class="photo-preview" id="preview" hidden>
+          <img id="preview-img" alt="Vista previa de la foto">
+          <button type="button" class="btn small" id="foto-quitar">Quitar</button>
+        </div>
+      </div>
+      <button type="submit" class="btn primary" id="guardar">Guardar trabajo</button>
+    </form>
+  </section>
+
+  <!-- HISTORIAL (búsqueda con filtros) -->
+  <section id="view-historial" aria-label="Historial de trabajos" hidden>
+    <form id="filtros" class="card" novalidate>
+      <details class="filtros" open>
+        <summary>Filtros</summary>
+        <div class="field">
+          <label for="f-q">Buscar texto</label>
+          <input type="text" id="f-q" maxlength="100" autocomplete="off" placeholder="Equipo, persona o palabras de la descripción">
+        </div>
+        <div class="field">
+          <label for="f-equipo">Equipo</label>
+          <select id="f-equipo"><option value="">Todos</option></select>
+        </div>
+        <div class="field grid2">
+          <div><label for="f-desde">Fecha desde</label><input type="date" id="f-desde"></div>
+          <div><label for="f-hasta">Fecha hasta</label><input type="date" id="f-hasta"></div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-f-personal">Personal</span>
+          <div class="chips" id="f-personal" role="group" aria-labelledby="lbl-f-personal"></div>
+          <div class="seg" id="f-modo-wrap" role="group" aria-label="Coincidencia de personal" style="margin:10px 0 0" hidden>
+            <button type="button" class="btn small" id="f-modo-any" aria-pressed="true">Alguno de ellos</button>
+            <button type="button" class="btn small" id="f-modo-all" aria-pressed="false">Todos juntos</button>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn primary" id="buscar">Buscar</button>
+          <button type="button" class="btn" id="limpiar">Limpiar</button>
+        </div>
+      </details>
+    </form>
+    <div class="resumen" id="res-resumen" role="status" aria-live="polite"></div>
+    <div id="lista"></div>
+    <button type="button" class="btn" id="mas" style="width:100%" hidden>Cargar más</button>
+  </section>
+
+  <!-- CONFIGURACIÓN -->
+  <section id="view-config" aria-label="Configuración" hidden>
+    <div class="seg" role="group" aria-label="Catálogo">
+      <button type="button" class="btn" id="seg-equipos" aria-pressed="true">Equipos</button>
+      <button type="button" class="btn" id="seg-personal" aria-pressed="false">Personal</button>
+    </div>
+    <div class="card">
+      <div class="row">
+        <input type="text" id="cfg-nuevo" maxlength="60" aria-label="Nuevo nombre" placeholder="Agregar nuevo…">
+        <button type="button" class="btn" id="cfg-add">Agregar</button>
+      </div>
+      <div class="hint">Renombrar o eliminar no modifica los trabajos ya cargados.</div>
+    </div>
+    <div class="card" id="cfg-activos"></div>
+    <div class="card" id="cfg-inactivos-wrap" hidden>
+      <details><summary id="cfg-inactivos-title"></summary><div id="cfg-inactivos"></div></details>
+    </div>
+  </section>
+</main>
+
+<nav aria-label="Secciones">
+  <button type="button" data-view="cargar" aria-selected="true">Cargar</button>
+  <button type="button" data-view="historial" aria-selected="false">Historial</button>
+  <button type="button" data-view="config" aria-selected="false">Configuración</button>
+</nav>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var MAX_SIDE = 1920, JPEG_Q = 0.8, MAX_B64 = 13.9 * 1024 * 1024;
+  var collator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
+  var $ = function (id) { return document.getElementById(id); };
+
+  var PAGE = 30;
+  var state = {
+    equipos: [], personal: [],
+    hist: { items: [], total: 0, last: null, opciones: null, sel: new Set(), modo: 'any', stale: true, token: 0 },
+    selected: new Set(), extras: [],
+    foto: null,            // { b64, url }
+    busy: false,
+    cfgKind: 'equipos',
+    cfg: { equipos: [], personal: [] },
+    editingId: null, confirmId: null
+  };
+
+  /* ---------- utilidades ---------- */
+  function h(tag, props) {
+    var el = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      var v = props[k];
+      if (k === 'class') el.className = v;
+      else if (k.indexOf('on') === 0) el.addEventListener(k.slice(2), v);
+      else if (v === true) el.setAttribute(k, '');
+      else if (v !== false && v != null) el.setAttribute(k, v);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var kids = [].concat(arguments[i]);
+      for (var j = 0; j < kids.length; j++) {
+        var kid = kids[j];
+        if (kid == null || kid === false) continue;
+        el.appendChild(kid.nodeType ? kid : document.createTextNode(String(kid)));
+      }
+    }
+    return el;
+  }
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
+  function call(fn) {
+    var args = [].slice.call(arguments, 1);
+    return new Promise(function (resolve, reject) {
+      var runner = google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.ok) resolve(res.data);
+          else reject(new Error((res && res.error) || 'Respuesta inválida del servidor'));
+        })
+        .withFailureHandler(function (e) { reject(new Error((e && e.message) || String(e))); });
+      runner[fn].apply(runner, args);
+    });
+  }
+
+  var toastTimer;
+  function toast(msg, type) {
+    var t = $('toast');
+    t.textContent = msg; t.className = type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.className = ''; }, type === 'err' ? 6000 : 2500);
+  }
+
+  function todayStr() {
+    var d = new Date(), p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function fmtDate(iso) { // yyyy-MM-dd -> dd/MM/yyyy
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+    return m ? m[3] + '/' + m[2] + '/' + m[1] : (iso || '');
+  }
+  function fmtStamp(iso) { // yyyy-MM-ddTHH:mm:ss -> dd/MM HH:mm
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso || '');
+    return m ? m[3] + '/' + m[2] + ' ' + m[4] + ':' + m[5] : '';
+  }
+  function normKey(s) {
+    return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+
+  /* ---------- navegación ---------- */
+  function showView(name) {
+    ['cargar', 'historial', 'config'].forEach(function (v) { $('view-' + v).hidden = v !== name; });
+    document.querySelectorAll('nav button').forEach(function (b) {
+      b.setAttribute('aria-selected', String(b.getAttribute('data-view') === name));
+    });
+    if (name === 'config') loadConfig();
+    if (name === 'historial' && state.hist.stale) runSearch(true);
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('nav button').forEach(function (b) {
+    b.addEventListener('click', function () { showView(b.getAttribute('data-view')); });
+  });
+
+  /* ---------- CARGAR ---------- */
+  function renderEquipos() {
+    var sel = $('equipo'), prev = sel.value;
+    clear(sel);
+    sel.appendChild(h('option', { value: '' }, 'Elegí un equipo…'));
+    state.equipos.slice().sort(collator.compare).forEach(function (n) {
+      sel.appendChild(h('option', { value: n }, n));
+    });
+    if (prev && state.equipos.indexOf(prev) !== -1) sel.value = prev;
+  }
+
+  function renderPersonal() {
+    var box = $('personal');
+    clear(box);
+    state.personal.slice().sort(collator.compare).forEach(function (n) {
+      box.appendChild(h('button', {
+        type: 'button', class: 'chip', 'aria-pressed': String(state.selected.has(n)),
+        onclick: function () {
+          if (state.selected.has(n)) state.selected.delete(n); else state.selected.add(n);
+          renderPersonal();
+        }
+      }, n));
+    });
+    var ex = $('extras');
+    clear(ex);
+    state.extras.forEach(function (n, i) {
+      ex.appendChild(h('button', {
+        type: 'button', class: 'chip extra', 'aria-pressed': 'true', 'aria-label': 'Quitar ' + n,
+        onclick: function () { state.extras.splice(i, 1); renderPersonal(); }
+      }, n));
+    });
+  }
+
+  function addExtra() {
+    var raw = $('otro').value.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!raw) return;
+    var k = normKey(raw);
+    var inCatalog = state.personal.find(function (n) { return normKey(n) === k; });
+    if (inCatalog) state.selected.add(inCatalog);
+    else if (!state.extras.some(function (n) { return normKey(n) === k; })) state.extras.push(raw);
+    $('otro').value = '';
+    renderPersonal();
+  }
+  $('otro-add').addEventListener('click', addExtra);
+  $('otro').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addExtra(); } });
+
+  $('desc').addEventListener('input', function () { $('desc-n').textContent = $('desc').value.length; });
+
+  function setFoto(f) {
+    if (state.foto) URL.revokeObjectURL(state.foto.url);
+    state.foto = f;
+    $('preview').hidden = !f;
+    if (f) $('preview-img').src = f.url; else $('preview-img').removeAttribute('src');
+    if (!f) $('foto').value = '';
+  }
+  $('foto-quitar').addEventListener('click', function () { setFoto(null); });
+
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result).split(',')[1] || ''); };
+      r.onerror = function () { reject(new Error('No se pudo leer la imagen')); };
+      r.readAsDataURL(blob);
+    });
+  }
+  function loadBitmap(file) {
+    if (!window.createImageBitmap) return Promise.reject(new Error('unsupported'));
+    return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(function () { return createImageBitmap(file); });
+  }
+  function compress(file) {
+    return loadBitmap(file).then(function (bmp) {
+      var s = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
+      var w = Math.round(bmp.width * s), hh = Math.round(bmp.height * s);
+      var c = document.createElement('canvas'); c.width = w; c.height = hh;
+      c.getContext('2d').drawImage(bmp, 0, 0, w, hh);
+      if (bmp.close) bmp.close();
+      return new Promise(function (resolve, reject) {
+        c.toBlob(function (b) { b ? resolve(b) : reject(new Error('No se pudo procesar la imagen')); }, 'image/jpeg', JPEG_Q);
+      });
+    }).then(function (blob) {
+      return blobToBase64(blob).then(function (b64) { return { b64: b64, url: URL.createObjectURL(blob) }; });
+    });
+  }
+  $('foto').addEventListener('change', function () {
+    var f = $('foto').files && $('foto').files[0];
+    if (!f) return;
+    $('guardar').disabled = true;
+    compress(f).then(function (res) {
+      if (res.b64.length > MAX_B64) { URL.revokeObjectURL(res.url); throw new Error('La imagen sigue superando los 10 MB'); }
+      setFoto(res);
+    }).catch(function (e) {
+      setFoto(null);
+      toast('No se pudo usar la foto: ' + (e.message === 'unsupported' ? 'navegador no compatible' : e.message), 'err');
+    }).then(function () { $('guardar').disabled = state.busy; });
+  });
+
+  function resetForm() {
+    $('equipo').value = '';
+    $('desc').value = ''; $('desc-n').textContent = '0';
+    state.selected.clear(); state.extras = [];
+    setFoto(null); renderPersonal();
+  }
+
+  $('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (state.busy) return;
+    var equipo = $('equipo').value, fecha = $('fecha').value, desc = $('desc').value.trim();
+    var personal = Array.from(state.selected).concat(state.extras);
+    if (!equipo) return toast('Elegí un equipo', 'err');
+    if (!fecha) return toast('Indicá la fecha', 'err');
+    if (fecha > todayStr()) return toast('La fecha no puede ser futura', 'err');
+    if (!personal.length) return toast('Indicá al menos una persona', 'err');
+    if (!desc) return toast('Escribí la descripción', 'err');
+
+    state.busy = true; $('guardar').disabled = true; $('guardar').textContent = 'Guardando…';
+    call('apiCrearTrabajo', {
+      equipo: equipo, fecha: fecha, personal: personal, descripcion: desc,
+      imagen: state.foto ? { mime: 'image/jpeg', base64: state.foto.b64 } : null
+    }).then(function () {
+      state.hist.stale = true; // el historial se recarga la próxima vez que se abra
+      resetForm();
+      toast('Trabajo guardado', 'ok');
+    }).catch(function (err) {
+      toast(err.message, 'err');
+    }).then(function () {
+      state.busy = false; $('guardar').disabled = false; $('guardar').textContent = 'Guardar trabajo';
+    });
+  });
+
+  /* ---------- HISTORIAL (búsqueda con filtros) ---------- */
+  function histCriteria() {
+    return {
+      q: $('f-q').value.trim(),
+      equipo: $('f-equipo').value,
+      desde: $('f-desde').value,
+      hasta: $('f-hasta').value,
+      personal: Array.from(state.hist.sel),
+      modo: state.hist.modo
+    };
+  }
+
+  function renderFiltroPersonal() {
+    var hs = state.hist, box = $('f-personal');
+    clear(box);
+    var names = hs.opciones ? hs.opciones.personal.slice().sort(collator.compare) : [];
+    names.forEach(function (n) {
+      box.appendChild(h('button', {
+        type: 'button', class: 'chip', 'aria-pressed': String(hs.sel.has(n)),
+        onclick: function () {
+          if (hs.sel.has(n)) hs.sel.delete(n); else hs.sel.add(n);
+          renderFiltroPersonal();
+        }
+      }, n));
+    });
+    $('f-modo-wrap').hidden = hs.sel.size < 2;
+    $('f-modo-any').setAttribute('aria-pressed', String(hs.modo === 'any'));
+    $('f-modo-all').setAttribute('aria-pressed', String(hs.modo === 'all'));
+  }
+
+  function renderFiltros() {
+    var o = state.hist.opciones;
+    if (!o) return;
+    var sel = $('f-equipo'), prev = sel.value;
+    clear(sel);
+    sel.appendChild(h('option', { value: '' }, 'Todos'));
+    o.equipos.slice().sort(collator.compare).forEach(function (n) { sel.appendChild(h('option', { value: n }, n)); });
+    sel.value = prev;
+    renderFiltroPersonal();
+  }
+
+  function renderHistorial() {
+    var hs = state.hist, box = $('lista');
+    clear(box);
+    $('res-resumen').textContent = hs.total === 1 ? '1 trabajo' : hs.total + ' trabajos';
+    if (!hs.items.length) box.appendChild(h('div', { class: 'empty' }, 'No hay trabajos que coincidan.'));
+    hs.items.forEach(function (r) {
+      var desc = h('div', { class: 'desc', title: 'Tocá para ver completo',
+        onclick: function (ev) { ev.currentTarget.classList.toggle('open'); } }, r.descripcion);
+      var link = /^https:\/\/drive\.google\.com\//.test(r.imagen)
+        ? h('a', { href: r.imagen, target: '_blank', rel: 'noopener noreferrer' }, 'Ver foto') : null;
+      box.appendChild(h('article', { class: 'item' },
+        h('div', { class: 'top' }, h('span', null, fmtDate(r.fecha)), h('span', null, 'Cargado ' + fmtStamp(r.creadoEn))),
+        h('div', { class: 'equipo' }, r.equipo),
+        h('div', { class: 'who' }, r.personal),
+        desc, link));
+    });
+    var rest = hs.total - hs.items.length;
+    $('mas').hidden = rest <= 0;
+    $('mas').textContent = 'Cargar más (' + rest + ' restantes)';
+  }
+
+  // reset=true: búsqueda nueva con los filtros del formulario. reset=false: siguiente página de la última búsqueda.
+  function runSearch(reset) {
+    var hs = state.hist, token = ++hs.token;
+    if (reset) hs.last = histCriteria();
+    if (!hs.last) return;
+    var payload = Object.assign({}, hs.last, { offset: reset ? 0 : hs.items.length, limit: PAGE, withOptions: reset });
+    $('buscar').disabled = true; $('mas').disabled = true;
+    $('res-resumen').textContent = 'Buscando…';
+    call('apiBuscarTrabajos', payload).then(function (res) {
+      if (token !== hs.token) return; // llegó una respuesta vieja: se descarta
+      hs.items = reset ? res.items : hs.items.concat(res.items);
+      hs.total = res.total; hs.stale = false;
+      if (res.opciones) { hs.opciones = res.opciones; renderFiltros(); }
+      renderHistorial();
+    }).catch(function (e) {
+      if (token !== hs.token) return;
+      $('res-resumen').textContent = '';
+      toast(e.message, 'err');
+    }).then(function () {
+      if (token === hs.token) { $('buscar').disabled = false; $('mas').disabled = false; }
+    });
+  }
+
+  $('filtros').addEventListener('submit', function (e) { e.preventDefault(); runSearch(true); });
+  $('mas').addEventListener('click', function () { runSearch(false); });
+  $('limpiar').addEventListener('click', function () {
+    $('f-q').value = ''; $('f-equipo').value = ''; $('f-desde').value = ''; $('f-hasta').value = '';
+    state.hist.sel.clear(); state.hist.modo = 'any';
+    renderFiltroPersonal();
+    runSearch(true);
+  });
+  $('f-modo-any').addEventListener('click', function () { state.hist.modo = 'any'; renderFiltroPersonal(); });
+  $('f-modo-all').addEventListener('click', function () { state.hist.modo = 'all'; renderFiltroPersonal(); });
+
+  /* ---------- CONFIGURACIÓN ---------- */
+  function setCfgKind(kind) {
+    state.cfgKind = kind; state.editingId = null; state.confirmId = null;
+    $('seg-equipos').setAttribute('aria-pressed', String(kind === 'equipos'));
+    $('seg-personal').setAttribute('aria-pressed', String(kind === 'personal'));
+    loadConfig();
+  }
+  $('seg-equipos').addEventListener('click', function () { setCfgKind('equipos'); });
+  $('seg-personal').addEventListener('click', function () { setCfgKind('personal'); });
+
+  function loadConfig() {
+    var kind = state.cfgKind;
+    call('apiCatalogoListar', kind).then(function (items) { applyItems(kind, items); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+
+  // Sincroniza catálogo + listas del formulario de carga.
+  function applyItems(kind, items) {
+    state.cfg[kind] = items;
+    state.hist.stale = true; // las opciones de los filtros salen del catálogo: recargar al abrir el historial
+    var active = items.filter(function (i) { return i.activo; }).map(function (i) { return i.nombre; });
+    if (kind === 'equipos') { state.equipos = active; renderEquipos(); }
+    else {
+      state.personal = active;
+      state.selected.forEach(function (n) { if (active.indexOf(n) === -1) state.selected.delete(n); });
+      renderPersonal();
+    }
+    renderConfig();
+  }
+
+  function mutate(fn) {
+    var args = [].slice.call(arguments, 1), kind = state.cfgKind;
+    return call.apply(null, [fn, kind].concat(args)).then(function (items) {
+      state.editingId = null; state.confirmId = null;
+      applyItems(kind, items);
+      return true;
+    }).catch(function (e) { toast(e.message, 'err'); return false; });
+  }
+
+  function cfgRow(item, active) {
+    var nameEl, actions;
+    if (state.editingId === item.id) {
+      var input = h('input', { type: 'text', maxlength: '60', value: item.nombre, 'aria-label': 'Nombre' });
+      var save = function () { mutate('apiCatalogoRenombrar', item.id, input.value); };
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); if (e.key === 'Escape') { state.editingId = null; renderConfig(); } });
+      nameEl = input;
+      actions = [h('button', { type: 'button', class: 'btn small', onclick: save }, 'Guardar'),
+                 h('button', { type: 'button', class: 'btn small', onclick: function () { state.editingId = null; renderConfig(); } }, 'Cancelar')];
+      setTimeout(function () { input.focus(); input.select(); }, 0);
+    } else if (state.confirmId === item.id) {
+      nameEl = h('span', { class: 'name' }, '¿Eliminar "' + item.nombre + '"?');
+      actions = [h('button', { type: 'button', class: 'btn small danger', onclick: function () { mutate('apiCatalogoActivar', item.id, false); } }, 'Sí, eliminar'),
+                 h('button', { type: 'button', class: 'btn small', onclick: function () { state.confirmId = null; renderConfig(); } }, 'No')];
+    } else if (active) {
+      nameEl = h('span', { class: 'name' }, item.nombre);
+      actions = [h('button', { type: 'button', class: 'btn small', onclick: function () { state.editingId = item.id; state.confirmId = null; renderConfig(); } }, 'Editar'),
+                 h('button', { type: 'button', class: 'btn small danger', onclick: function () { state.confirmId = item.id; state.editingId = null; renderConfig(); } }, 'Eliminar')];
+    } else {
+      nameEl = h('span', { class: 'name muted' }, item.nombre);
+      actions = [h('button', { type: 'button', class: 'btn small', onclick: function () { mutate('apiCatalogoActivar', item.id, true); } }, 'Reactivar')];
+    }
+    return h('div', { class: 'cfg-row' }, nameEl, actions);
+  }
+
+  function renderConfig() {
+    var items = state.cfg[state.cfgKind].slice().sort(function (a, b) { return collator.compare(a.nombre, b.nombre); });
+    var act = items.filter(function (i) { return i.activo; });
+    var ina = items.filter(function (i) { return !i.activo; });
+    var box = $('cfg-activos'); clear(box);
+    if (!act.length) box.appendChild(h('div', { class: 'empty' }, 'No hay elementos activos.'));
+    act.forEach(function (i) { box.appendChild(cfgRow(i, true)); });
+    $('cfg-inactivos-wrap').hidden = !ina.length;
+    $('cfg-inactivos-title').textContent = 'Eliminados (' + ina.length + ')';
+    var ib = $('cfg-inactivos'); clear(ib);
+    ina.forEach(function (i) { ib.appendChild(cfgRow(i, false)); });
+  }
+
+  function cfgAdd() {
+    var v = $('cfg-nuevo').value;
+    if (!v.trim()) return;
+    mutate('apiCatalogoAgregar', v).then(function (ok) { if (ok) $('cfg-nuevo').value = ''; });
+  }
+  $('cfg-add').addEventListener('click', cfgAdd);
+  $('cfg-nuevo').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); cfgAdd(); } });
+
+  /* ---------- arranque ---------- */
+  $('fecha').value = todayStr();
+  $('fecha').max = todayStr();
+  call('apiBootstrap').then(function (d) {
+    state.equipos = d.equipos; state.personal = d.personal;
+    renderEquipos(); renderPersonal();
+    $('sub').textContent = d.equipos.length + ' equipos · ' + d.personal.length + ' personas';
+  }).catch(function (e) {
+    $('sub').textContent = 'Error al cargar';
+    toast(e.message, 'err');
+  });
+})();
+</script>
+</body>
+</html>

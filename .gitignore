@@ -1,0 +1,10 @@
+test.zip
+.clasprc.json
+node_modules/
+*.log
+.env
+.DS_Store
+Thumbs.db
+.vscode/
+
+.clasp.json
